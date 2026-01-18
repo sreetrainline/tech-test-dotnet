@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace ClearBank.DeveloperTest.Data;
 
-public sealed class DataStoreFactory(
+public class DataStoreFactory(
     IOptions<DataStoreOptions> options,
     IServiceProvider serviceProvider
 ) : IDataStoreFactory
@@ -12,15 +12,4 @@ public sealed class DataStoreFactory(
     public IAccountDataStore Create()
         => serviceProvider.GetRequiredKeyedService<IAccountDataStore>(
             options.Value.DataStoreType.ToString());
-}
-
-public class DataStoreOptions
-{
-    public DataStoreType DataStoreType { get; init; } = DataStoreType.Normal;
-}
-
-public enum DataStoreType
-{
-    Normal,
-    Backup
 }
