@@ -1,6 +1,5 @@
 ﻿using ClearBank.DeveloperTest.Data;
 using ClearBank.DeveloperTest.Types;
-using System.Configuration;
 
 namespace ClearBank.DeveloperTest.Services
 {
@@ -8,19 +7,22 @@ namespace ClearBank.DeveloperTest.Services
     {
         public MakePaymentResult MakePayment(MakePaymentRequest request)
         {
+            var makePaymentResult = new MakePaymentResult() { Success = false };
+
             if (request is not { Amount: > 0 })
-                return new MakePaymentResult() { Success = false };
+                return makePaymentResult;
 
             var accountDataStore = dataStoreFactory.Create();
             var account = accountDataStore.GetAccount(request.DebtorAccountNumber);
 
             if (!paymentValidator.Validate(account, request))
-                return new MakePaymentResult { Success = false };
+                return makePaymentResult;
 
             account.Balance -= request.Amount;
             accountDataStore.UpdateAccount(account);
+            makePaymentResult.Success = true;
 
-            return new MakePaymentResult { Success = true };
+            return makePaymentResult;
         }
     }
 }
