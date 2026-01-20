@@ -6,44 +6,44 @@ namespace ClearBank.DeveloperTest.Tests
 {
     public class BacsRuleTests
     {
-        [Fact]
-        public void IsValid_WhenBacsIsAllowed_ReturnsTrue()
+        private BacsRule _rule;
+        private MakePaymentRequest _request;
+
+        public BacsRuleTests()
         {
-            var rule = new BacsRule();
-
-            var account = new Account
-            {
-                AllowedPaymentSchemes = AllowedPaymentSchemes.Bacs
-            };
-
-            var request = new MakePaymentRequest
+            _rule = new BacsRule();
+            _request = new MakePaymentRequest
             {
                 PaymentScheme = PaymentScheme.Bacs
             };
-
-            var ok = rule.IsValid(account, request);
-
-            Assert.True(ok);
         }
 
-        [Fact]
-        public void IsValid_WhenBacsIsNotAllowed_ReturnsFalse()
+        [Theory]
+        [InlineData(AllowedPaymentSchemes.Bacs)]
+        [InlineData(AllowedPaymentSchemes.Bacs | AllowedPaymentSchemes.FasterPayments)]
+        [InlineData(AllowedPaymentSchemes.Bacs | AllowedPaymentSchemes.Chaps)]
+        public void IsValid_WhenBacsIsAllowed(AllowedPaymentSchemes allowedPaymentScheme)
         {
-            var rule = new BacsRule();
-
             var account = new Account
             {
-                AllowedPaymentSchemes = AllowedPaymentSchemes.FasterPayments
+                AllowedPaymentSchemes = allowedPaymentScheme
             };
 
-            var request = new MakePaymentRequest
+            Assert.True(_rule.IsValid(account, _request));
+        }
+
+        [Theory]
+        [InlineData(AllowedPaymentSchemes.FasterPayments)]
+        [InlineData(AllowedPaymentSchemes.Chaps)]
+        [InlineData(AllowedPaymentSchemes.Chaps | AllowedPaymentSchemes.FasterPayments)]
+        public void IsInValid_WhenBacsIsNotAllowed(AllowedPaymentSchemes allowedPaymentScheme)
+        {
+            var account = new Account
             {
-                PaymentScheme = PaymentScheme.Bacs
+                AllowedPaymentSchemes = allowedPaymentScheme
             };
 
-            var ok = rule.IsValid(account, request);
-
-            Assert.False(ok);
+            Assert.False(_rule.IsValid(account, _request));
         }
     }
 }

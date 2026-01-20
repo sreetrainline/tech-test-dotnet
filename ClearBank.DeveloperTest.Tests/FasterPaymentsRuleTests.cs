@@ -5,49 +5,67 @@ using Xunit;
 namespace ClearBank.DeveloperTest.Tests
 {
     public class FasterPaymentsRuleTests
+{
+    private readonly FasterPaymentsRule _rule;
+    private readonly MakePaymentRequest _request;
+
+    public FasterPaymentsRuleTests()
     {
-        [Fact]
-        public void IsValid_WhenAllowedAndSufficientBalance_ReturnsTrue()
+        _rule = new FasterPaymentsRule();
+        _request = new MakePaymentRequest
         {
-            var rule = new FasterPaymentsRule();
-
-            var account = new Account
-            {
-                AllowedPaymentSchemes = AllowedPaymentSchemes.FasterPayments,
-                Balance = 100
-            };
-
-            var request = new MakePaymentRequest
-            {
-                Amount = 50,
-                PaymentScheme = PaymentScheme.FasterPayments
-            };
-
-            var ok = rule.IsValid(account, request);
-
-            Assert.True(ok);
-        }
-
-        [Fact]
-        public void IsValid_WhenInsufficientBalance_ReturnsFalse()
-        {
-            var rule = new FasterPaymentsRule();
-
-            var account = new Account
-            {
-                AllowedPaymentSchemes = AllowedPaymentSchemes.FasterPayments,
-                Balance = 10
-            };
-
-            var request = new MakePaymentRequest
-            {
-                Amount = 50,
-                PaymentScheme = PaymentScheme.FasterPayments
-            };
-
-            var ok = rule.IsValid(account, request);
-
-            Assert.False(ok);
-        }
+            PaymentScheme = PaymentScheme.FasterPayments,
+            Amount = 50
+        };
     }
+
+    [Theory]
+    [InlineData(AllowedPaymentSchemes.FasterPayments)]
+    [InlineData(AllowedPaymentSchemes.FasterPayments | AllowedPaymentSchemes.Bacs)]
+    [InlineData(AllowedPaymentSchemes.FasterPayments | AllowedPaymentSchemes.Chaps)]
+    public void IsValid_WhenFasterPayments_IsAllowed_AndSufficientBalance(
+        AllowedPaymentSchemes allowedPaymentScheme)
+    {
+        var account = new Account
+        {
+            AllowedPaymentSchemes = allowedPaymentScheme,
+            Balance = 100
+        };
+
+        Assert.True(_rule.IsValid(account, _request));
+    }
+
+    [Theory]
+    [InlineData(AllowedPaymentSchemes.FasterPayments)]
+    [InlineData(AllowedPaymentSchemes.FasterPayments | AllowedPaymentSchemes.Bacs)]
+    [InlineData(AllowedPaymentSchemes.FasterPayments | AllowedPaymentSchemes.Chaps)]
+    public void IsInValid_WhenFasterPayments_IsAllowed_AndInsufficientBalance(
+        AllowedPaymentSchemes allowedPaymentScheme)
+    {
+        var account = new Account
+        {
+            AllowedPaymentSchemes = allowedPaymentScheme,
+            Balance = 10
+        };
+
+        Assert.False(_rule.IsValid(account, _request));
+    }
+
+    [Theory]
+    [InlineData(AllowedPaymentSchemes.Bacs)]
+    [InlineData(AllowedPaymentSchemes.Chaps)]
+    [InlineData(AllowedPaymentSchemes.Bacs | AllowedPaymentSchemes.Chaps)]
+    public void IsInValid_WhenFasterPayments_IsNotAllowed_AndSufficientBalance(
+        AllowedPaymentSchemes allowedPaymentScheme)
+    {
+        var account = new Account
+        {
+            AllowedPaymentSchemes = allowedPaymentScheme,
+            Balance = 100
+        };
+
+        Assert.False(_rule.IsValid(account, _request));
+    }
+}
+
 }

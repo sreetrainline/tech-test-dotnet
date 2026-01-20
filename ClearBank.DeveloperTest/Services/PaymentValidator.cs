@@ -15,6 +15,7 @@ public class PaymentValidator(IEnumerable<IPaymentSchemeRule> rules) : IPaymentV
     {
         if (account is null) return false;
 
+        /*Deviation from Original logic*/
         if (!_rules.TryGetValue(request.PaymentScheme, out var rule))
             throw new NotSupportedException($"Unsupported scheme {request.PaymentScheme}");
 

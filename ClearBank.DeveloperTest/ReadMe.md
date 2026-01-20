@@ -17,3 +17,4 @@ Things I would in a Real Life scenario - With More time
 4. Request Validation
 5. access levels of fields - many can be init
 6. Integration Tests
+7. Logging

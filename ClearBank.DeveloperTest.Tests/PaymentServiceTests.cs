@@ -8,111 +8,67 @@ namespace ClearBank.DeveloperTest.Tests
 {
     public class PaymentServiceTests
     {
-        private readonly Mock<IDataStoreFactory> _dataStoreFactory = new();
-        private readonly Mock<IAccountDataStore> _accountDataStore = new();
-        private readonly Mock<IPaymentValidator> _validator = new();
+        private readonly Mock<IDataStoreFactory> _dataStoreFactory;
+        private readonly Mock<IAccountDataStore> _accountDataStore;
+        private readonly Mock<IPaymentValidator> _paymentValidator;
+        private readonly PaymentService _sut;
 
-        private PaymentService CreateSut()
+        private readonly MakePaymentRequest _request;
+        private readonly Account _account;
+
+        public PaymentServiceTests()
         {
+            _dataStoreFactory = new Mock<IDataStoreFactory>();
+            _accountDataStore = new Mock<IAccountDataStore>();
+            _paymentValidator = new Mock<IPaymentValidator>();
+
             _dataStoreFactory
-                .Setup(f => f.Create())
+                .Setup(x => x.Create())
                 .Returns(_accountDataStore.Object);
 
-            return new PaymentService(
-                _dataStoreFactory.Object,
-                _validator.Object);
-        }
-
-        [Fact]
-        public void MakePayment_BacsPayment_WithValidAccount_ReturnsSuccess()
-        {
-            var account = new Account { Balance = 200 };
-
-            var request = new MakePaymentRequest
+            _request = new MakePaymentRequest
             {
-                DebtorAccountNumber = "12345",
-                Amount = 100,
-                PaymentScheme = PaymentScheme.Bacs
-            };
-
-            _accountDataStore.Setup(d => d.GetAccount("12345")).Returns(account);
-            _validator.Setup(v => v.Validate(account, request)).Returns(true);
-
-            var sut = CreateSut();
-
-            var result = sut.MakePayment(request);
-
-            Assert.True(result.Success);
-            Assert.Equal(100, account.Balance);
-
-            _accountDataStore.Verify(d => d.UpdateAccount(account), Times.Once);
-        }
-
-        [Fact]
-        public void MakePayment_BacsPayment_WithNullAccount_ReturnsFalse()
-        {
-            var request = new MakePaymentRequest
-            {
-                DebtorAccountNumber = "99999",
-                Amount = 100,
-                PaymentScheme = PaymentScheme.Bacs
-            };
-
-            _accountDataStore.Setup(d => d.GetAccount("99999")).Returns((Account?)null);
-            _validator.Setup(v => v.Validate(null, request)).Returns(false);
-
-            var sut = CreateSut();
-
-            var result = sut.MakePayment(request);
-
-            Assert.False(result.Success);
-            _accountDataStore.Verify(d => d.UpdateAccount(It.IsAny<Account>()), Times.Never);
-        }
-
-        [Fact]
-        public void MakePayment_FasterPayments_WithInsufficientBalance_ReturnsFalse()
-        {
-            var account = new Account { Balance = 50 };
-
-            var request = new MakePaymentRequest
-            {
-                DebtorAccountNumber = "12345",
-                Amount = 100,
+                DebtorAccountNumber = "Account1",
+                Amount = 50,
                 PaymentScheme = PaymentScheme.FasterPayments
             };
 
-            _accountDataStore.Setup(d => d.GetAccount("12345")).Returns(account);
-            _validator.Setup(v => v.Validate(account, request)).Returns(false);
+            _account = new Account
+            {
+                Balance = 100
+            };
 
-            var sut = CreateSut();
+            _accountDataStore
+                .Setup(x => x.GetAccount(_request.DebtorAccountNumber))
+                .Returns(_account);
 
-            var result = sut.MakePayment(request);
-
-            Assert.False(result.Success);
-            Assert.Equal(50, account.Balance); // unchanged
+            _sut = new PaymentService(
+                _dataStoreFactory.Object,
+                _paymentValidator.Object);
         }
 
         [Fact]
-        public void MakePayment_ChapsPayment_WithNonLiveAccount_ReturnsFalse()
+        public void MakePayment_WhenValidationFails_ReturnsFailure_DoesNotUpdateAccount()
         {
-            var account = new Account { Status = AccountStatus.Disabled };
+            _paymentValidator
+                .Setup(x => x.Validate(_account, _request))
+                .Returns(false);
 
-            var request = new MakePaymentRequest
-            {
-                DebtorAccountNumber = "12345",
-                Amount = 100,
-                PaymentScheme = PaymentScheme.Chaps
-            };
+            Assert.False(_sut.MakePayment(_request).Success);
+            _accountDataStore.Verify(x => x.UpdateAccount(It.IsAny<Account>()), Times.Never);
+        }
 
-            _accountDataStore.Setup(d => d.GetAccount("12345"))
-                .Returns(account);
-            _validator.Setup(v => v.Validate(account, request)).Returns(false);
+        [Fact]
+        public void MakePayment_WhenValidationPasses_ReturnsSuccess_AndUpdatesAccount()
+        {
+            _paymentValidator
+                .Setup(x => x.Validate(_account, _request))
+                .Returns(true);
 
-            var sut = CreateSut();
-
-            var result = sut.MakePayment(request);
-
-            Assert.False(result.Success);
+            Assert.True (_sut.MakePayment(_request).Success);
+            Assert.Equal(50, _account.Balance);
+            _accountDataStore.Verify(x => x.UpdateAccount(_account), Times.Once);
         }
     }
 }
+

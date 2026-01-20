@@ -6,46 +6,62 @@ namespace ClearBank.DeveloperTest.Tests
 {
     public class ChapsRuleTests
     {
-        [Fact]
-        public void IsValid_WhenAllowedAndAccountLive_ReturnsTrue()
-        {
-            var rule = new ChapsRule();
+        private readonly ChapsRule _rule;
+        private readonly MakePaymentRequest _request;
 
+        public ChapsRuleTests()
+        {
+            _rule = new ChapsRule();
+            _request = new MakePaymentRequest
+            {
+                PaymentScheme = PaymentScheme.Chaps
+            };
+        }
+
+        [Theory]
+        [InlineData(AllowedPaymentSchemes.Chaps)]
+        [InlineData(AllowedPaymentSchemes.Chaps | AllowedPaymentSchemes.FasterPayments)]
+        [InlineData(AllowedPaymentSchemes.Chaps | AllowedPaymentSchemes.Bacs)]
+        public void IsValid_WhenChaps_IsAllowed_AndAccount_IsLive(AllowedPaymentSchemes allowedPaymentScheme)
+        {
             var account = new Account
             {
-                AllowedPaymentSchemes = AllowedPaymentSchemes.Chaps,
+                AllowedPaymentSchemes = allowedPaymentScheme,
                 Status = AccountStatus.Live
             };
 
-            var request = new MakePaymentRequest
-            {
-                PaymentScheme = PaymentScheme.Chaps
-            };
-
-            var ok = rule.IsValid(account, request);
-
-            Assert.True(ok);
+            Assert.True(_rule.IsValid(account, _request));
         }
 
-        [Fact]
-        public void IsValid_WhenAccountNotLive_ReturnsFalse()
+        [Theory]
+        [InlineData(AllowedPaymentSchemes.Chaps)]
+        [InlineData(AllowedPaymentSchemes.Chaps | AllowedPaymentSchemes.FasterPayments)]
+        [InlineData(AllowedPaymentSchemes.Chaps | AllowedPaymentSchemes.Bacs)]
+        public void IsInValid_WhenChaps_IsAllowed_AndAccount_IsNotLive(AllowedPaymentSchemes allowedPaymentScheme)
         {
-            var rule = new ChapsRule();
-
             var account = new Account
             {
-                AllowedPaymentSchemes = AllowedPaymentSchemes.Chaps,
+                AllowedPaymentSchemes = allowedPaymentScheme,
                 Status = AccountStatus.Disabled
             };
 
-            var request = new MakePaymentRequest
+            Assert.False(_rule.IsValid(account, _request));
+        }
+
+        [Theory]
+        [InlineData(AllowedPaymentSchemes.Bacs)]
+        [InlineData(AllowedPaymentSchemes.FasterPayments)]
+        [InlineData(AllowedPaymentSchemes.Bacs | AllowedPaymentSchemes.FasterPayments)]
+        public void IsInValid_WhenAccount_IsLive_AndChaps_NotAllowed(AllowedPaymentSchemes allowedPaymentScheme)
+        {
+            var account = new Account
             {
-                PaymentScheme = PaymentScheme.Chaps
+                AllowedPaymentSchemes = allowedPaymentScheme,
+                Status = AccountStatus.Live
             };
 
-            var ok = rule.IsValid(account, request);
-
-            Assert.False(ok);
+            Assert.False(_rule.IsValid(account, _request));
         }
     }
+
 }

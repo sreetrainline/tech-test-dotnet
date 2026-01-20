@@ -9,9 +9,6 @@ namespace ClearBank.DeveloperTest.Services
         {
             var makePaymentResult = new MakePaymentResult() { Success = false };
 
-            if (request is not { Amount: > 0 })
-                return makePaymentResult;
-
             var accountDataStore = dataStoreFactory.Create();
             var account = accountDataStore.GetAccount(request.DebtorAccountNumber);
 
